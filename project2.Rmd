@@ -1,0 +1,237 @@
+---
+title: "project2"
+output: html_document
+---
+
+```{r}
+library(readxl)
+```
+```{r}
+cboe <- read_excel("VIXCLS.xls")
+cboe$observation_date <- as.Date(cboe$observation_date)
+cboe <- subset(cboe, cboe$observation_date > "2005-01-01")
+cboe2 <- subset(cboe, cboe$observation_date > '2010-05-09')
+
+sp <- read_excel("SP500.xls")
+sp$observation_date <- as.Date(sp$observation_date)
+
+states <- read_excel("us-states.xls")
+states$date <- as.Date(states$date)
+states$fips <- as.integer(states$fips)
+
+sp1 <- read_excel("sp.xls")
+sp1$Date <- as.Date(sp1$Date)
+sp1 <- subset(sp1, sp1$Date <= "2020-04-06")
+sp1 <- subset(sp1, sp1$Date > "2005-01-01")
+for(i in 1:length(sp1$Close)){
+  if(is.na(sp1$Close[i]) == TRUE){
+    sp1$Close[i] <- sp1$Close[i-1]
+  }
+}
+cases <- vector()
+death <- vector()
+data1 <- states[!duplicated(states$date),]
+for(n in 1:length(data1$date)){
+  my_data <- subset(states, states$date == data1$date[n])
+  cases <- c(cases, sum(my_data$cases))
+  death <- c(death, sum(my_data$deaths))
+}
+```
+Vizualization of VIXCLS and S&P500
+```{r}
+plot(sp1$Close, type = "l", col = "blue", x = sp1$Date, xlab = "Date", ylab = "S&P500")
+plot(cboe$VIXCLS, type = "l", col = "blue", x = cboe$observation_date, xlab = "Date", ylab = "VIXCLS")
+```
+Vizualization of VIXCLS and percentage of SD of S&P500
+```{r}
+sp1$Close <- as.double(sp1$Close)
+vol <- vector()
+for(i in 1:3810){
+  cur <- sd(sp1$Close[i]:sp1$Close[i+31])/sp1$Close[i]
+  vol <- c(vol, cur)
+}
+plot(vol*1000, type = "l", col = "blue", xlab = "Date", ylab = "%")
+lines(cboe$VIXCLS,col="red")
+legend("bottomleft", c("VIXCLS","SD of S&P500 in %"), fill=c("red","blue"))
+```
+before 2008
+```{r}
+bef <- subset(sp1, sp1$Date<"2008-01-01")
+#plot(bef$Close, type = "l", col = "blue", x = bef$Date, xlab = "Date", ylab = "S&P500")
+befc <- subset(cboe, cboe$observation_date<="2007-10-10")
+vol <- vector()
+for(i in 1:723){
+  cur <- sd(bef$Close[i]:bef$Close[i+31])/bef$Close[i]
+  vol <- c(vol, cur)
+}
+vol <- vol*1000
+plot(vol, type = "l", col = "blue", xlab = "Time period", ylab = "%")
+lines(befc$VIXCLS,col="red")
+legend("bottomleft", c("VIXCLS","SD of S&P500 in %"), fill=c("red","blue"))
+
+```
+```{r}
+coef <- vector()
+for(p in 1:31){
+  #p <- 12
+  time <- 723-p
+  befc2 <- vector()
+  vol1 <- vector()
+  for(k in 1:time){
+    m <- k+p
+   befc2 <- c(befc2, befc$VIXCLS[m])
+   vol1 <- c(vol1, vol[k])
+  }
+#plot(vol1, type = "l", col = "blue")
+#lines(befc2,col="red")
+  u <- lm(vol1 ~ befc2)
+  coef <- c(coef, u$coefficients[2])
+  #summary(u)
+  #print(u$coefficients[2])
+}
+plot(coef, type = "l", col="blue", ylab = "coefficient", xlab = "shift in days")
+```
+
+from 2013 to 2016
+```{r}
+bef <- subset(sp1, sp1$Date>"2013-01-01")
+bef <- subset(bef, bef$Date<"2016-01-01")
+#plot(bef$Close, type = "l", col = "blue", x = bef$Date, xlab = "Date", ylab = "S&P500")
+befc <- subset(cboe, cboe$observation_date>"2013-01-01")
+befc <- subset(befc, befc$observation_date<="2015-10-13")
+
+vol <- vector()
+for(i in 1:725){
+  cur <- sd(bef$Close[i]:bef$Close[i+31])/bef$Close[i]
+  vol <- c(vol, cur)
+}
+vol <- vol*1000
+plot(vol, type = "l", col = "blue", xlab = "Time period", ylab = "%")
+lines(befc$VIXCLS,col="red")
+legend("bottomleft", c("VIXCLS","SD of S&P500 in %"), fill=c("red","blue"))
+
+```
+```{r}
+coef <- vector()
+for(p in 1:31){
+  #p <- 14
+  time <- 725-p
+  befc2 <- vector()
+  vol1 <- vector()
+  for(k in 1:time){
+    m <- k+p
+   befc2 <- c(befc2, befc$VIXCLS[m])
+   vol1 <- c(vol1, vol[k])
+  }
+  u <- lm(vol1 ~ befc2)
+  coef <- c(coef, u$coefficients[2])
+  #summary(u)
+}
+plot(coef, type = "l", col="blue", ylab = "coefficient", xlab = "shift in days")
+```
+from 2008 to 2010
+```{r}
+bef <- subset(sp1, sp1$Date>"2008-01-01")
+bef <- subset(bef, bef$Date<"2010-01-01")
+#plot(bef$Close, type = "l", col = "blue", x = bef$Date)
+befc <- subset(cboe, cboe$observation_date>"2008-01-01")
+befc <- subset(befc, befc$observation_date<="2009-10-26")
+
+vol <- vector()
+for(i in 1:474){
+  cur <- sd(bef$Close[i]:bef$Close[i+31])/bef$Close[i]
+  vol <- c(vol, cur)
+}
+
+vol <- vol*1000
+plot(vol, type = "l", col = "blue", xlab = "Time period", ylab = "%")
+lines(befc$VIXCLS,col="red")
+legend("bottomleft", c("VIXCLS","SD of S&P500 in %"), fill=c("red","blue"))
+```
+```{r}
+coef <- vector()
+for(p in 1:51){
+  #p <- 37
+  time <- 454-p
+  befc2 <- vector()
+  vol1 <- vector()
+  for(k in 1:time){
+    m <- k+p
+   befc2 <- c(befc2, befc$VIXCLS[m])
+   vol1 <- c(vol1, vol[k])
+  }
+  u <- lm(vol1 ~ befc2)
+  coef <- c(coef, u$coefficients[2])
+  #summary(u)
+}
+plot(coef, type = "l", col="blue")
+```
+Vizualization of current situation
+```{r}
+bef <- subset(sp1, sp1$Date>"2020-01-01")
+
+befc <- subset(cboe, cboe$observation_date>"2020-01-01")
+
+vol <- vector()
+for(i in 1:35){
+  cur <- sd(bef$Close[i]:bef$Close[i+31])/bef$Close[i]
+  vol <- c(vol, cur)
+}
+
+
+vol <- vol*1000
+plot(befc$VIXCLS, type = "l", col = "red", xlab = "Time period", ylab = "%", ylim = c(0, 100))
+lines(vol,col="blue")
+legend("bottomleft", c("VIXCLS","SD of S&P500 in %"), fill=c("red","blue"))
+
+plot(befc$VIXCLS, type = "l", col = "red", ylim = c(0, 100), xlab = "Time period", ylab = "%, numbers")
+lines(cases, col = "brown")
+lines(death, col = "green")
+lines(vol, col="blue")
+
+
+plot(befc$VIXCLS, type = "l", col = "red", ylim = c(0, 1000), xlab = "Time period", ylab = "%, numbers")
+lines(cases, col = "brown")
+lines(death, col = "green")
+lines(vol, col="blue")
+
+plot(bef$Close, type = "l", col = "blue", x = bef$Date, xlab = "Date", ylab = "S&P500")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
